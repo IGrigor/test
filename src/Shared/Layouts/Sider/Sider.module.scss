@@ -1,5 +1,9 @@
 .sider {
-  text-align: center;
-  color: #fff;
-  background-color: #1677ff;
+  overflow: 'auto';
+  height: '100vh';
+  position: 'sticky';
+  inset-inline-start: 0;
+  top: 0;
+  scrollbar-width: 'thin';
+  scrollbar-gutter: 'stable';
 }

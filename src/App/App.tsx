@@ -1,13 +1,16 @@
+import { Route, Routes } from "react-router-dom"
 import { MainLayout } from "../Shared/Layouts/MainLayout"
-import { Todolist } from "../Widgets/Todolist"
 import './reset.css'
+import { DailyPage } from "../Pages/DailyPage/DailyPage"
 
 function App() {
 
   return (
-    <MainLayout>
-      <Todolist/>
-    </MainLayout>
+    <Routes>
+      <Route element={<MainLayout />}>
+        <Route path="/" element={<DailyPage />}/>
+      </Route>
+    </Routes>
   )
 }
 

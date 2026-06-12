@@ -1,3 +1,5 @@
+import { TodoTable } from '../../Widgets/TodoTable';
+
 export const DailyPage = () => {
-  return <div>DailyPage</div>;
+  return <TodoTable />;
 };

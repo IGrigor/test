@@ -1,64 +1,44 @@
-import {
-  Button,
-  Checkbox,
-  Form,
-  Input,
-  Popconfirm,
-  Table,
-  type FormInstance,
-  type InputRef,
-  type TableColumnsType,
-} from 'antd';
+import { Button, Checkbox, Popconfirm, Table, type TableProps } from 'antd';
 import type { TodoItem } from '../../Entities/TodoItem/TodoItem';
-import React, { useContext, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { EditableRow } from '../EditableRow/EditableRow';
+import { EditableCell } from '../EditableCell/EditableCell';
+import { initialData } from './config/config';
 
-interface EditableRowProps {
-  index: number;
-}
+type ColumnTypes = Exclude<TableProps<TodoItem>['columns'], undefined>;
 
-interface EditableCellProps {
-  title: React.ReactNode;
-  editable: boolean;
-  dataIndex: keyof TodoItem;
-  record: TodoItem;
-  handleSave: (record: TodoItem) => void;
-}
+const storageData = localStorage.getItem('TodoTableData');
+const data = storageData ? JSON.parse(storageData || '') : null;
 
 export const TodoTable = () => {
-  const EditableContext = React.createContext<FormInstance<any> | null>(null);
-
-  const handleDelete = (id: React.Key) => {
-    const newData = dataSource.filter((item) => item.id !== id);
-    setDataSource(newData);
-  };
-
-  const [dataSource, setDataSource] = useState<TodoItem[]>([
-    {
-      id: 1,
-      category: 'daily',
-      description: '10000 steps',
-      isDone: true,
-    },
-    {
-      id: 2,
-      category: 'daily',
-      description: '100g proteins',
-      isDone: false,
-    },
-  ]);
+  const [dataSource, setDataSource] = useState<TodoItem[]>(data || initialData);
   const [count, setCount] = useState(dataSource.length + 1);
 
-  const columns: TableColumnsType = [
+  const defaultColumns: (ColumnTypes[number] & {
+    editable?: boolean;
+    dataIndex: string;
+  })[] = [
     {
       title: 'isDone',
       dataIndex: 'isDone',
       key: 'isDone',
-      render: (text) => <Checkbox>{text}</Checkbox>,
+      render: (_, record) => (
+        <Checkbox
+          checked={record.isDone}
+          onChange={() => {
+            const newData = dataSource.map((item) =>
+              item.id === record.id ? { ...item, isDone: !item.isDone } : item,
+            );
+            setDataSource(newData);
+          }}
+        />
+      ),
     },
     {
       title: 'description',
       dataIndex: 'description',
       key: 'description',
+      editable: true,
     },
     {
       title: 'operation',
@@ -75,88 +55,39 @@ export const TodoTable = () => {
     },
   ];
 
-  const EditableRow: React.FC<EditableRowProps> = ({ index, ...props }) => {
-    const [form] = Form.useForm();
-    return (
-      <Form form={form} component={false}>
-        <EditableContext.Provider value={form}>
-          <tr {...props} />
-        </EditableContext.Provider>
-      </Form>
-    );
-  };
-
-  const EditableCell: React.FC<React.PropsWithChildren<EditableCellProps>> = ({
-    title,
-    editable,
-    children,
-    dataIndex,
-    record,
-    handleSave,
-    ...restProps
-  }) => {
-    const [editing, setEditing] = useState(false);
-    const inputRef = useRef<InputRef>(null);
-    const form = useContext(EditableContext)!;
-
-    useEffect(() => {
-      if (editing) {
-        inputRef.current?.focus();
-      }
-    }, [editing]);
-
-    const toggleEdit = () => {
-      setEditing(!editing);
-      form.setFieldsValue({ [dataIndex]: record[dataIndex] });
-    };
-
-    const save = async () => {
-      try {
-        const values = await form.validateFields();
-
-        toggleEdit();
-        handleSave({ ...record, ...values });
-      } catch (errInfo) {
-        console.log('Save failed:', errInfo);
-      }
-    };
-
-    let childNode = children;
-
-    if (editable) {
-      childNode = editing ? (
-        <Form.Item
-          style={{ margin: 0 }}
-          name={dataIndex}
-          rules={[
-            {
-              required: true,
-              message: `${title} is required.`,
-            },
-          ]}
-        >
-          <Input ref={inputRef} onPressEnter={save} onBlur={save} />
-        </Form.Item>
-      ) : (
-        <div
-          className="editable-cell-value-wrap"
-          style={{ paddingInlineEnd: 24 }}
-          onClick={toggleEdit}
-        >
-          {children}
-        </div>
-      );
-    }
-
-    return <td {...restProps}>{childNode}</td>;
-  };
-
   const components = {
     body: {
       row: EditableRow,
       cell: EditableCell,
     },
   };
+
+  const handleSave = (row: TodoItem) => {
+    const newData = [...dataSource];
+    const index = newData.findIndex((item) => row.id === item.id);
+    const item = newData[index];
+    newData.splice(index, 1, {
+      ...item,
+      ...row,
+    });
+    setDataSource(newData);
+  };
+
+  const columns = defaultColumns.map((col) => {
+    if (!col.editable) {
+      return col;
+    }
+    return {
+      ...col,
+      onCell: (record: TodoItem) => ({
+        record,
+        editable: col.editable,
+        dataIndex: col.dataIndex,
+        title: col.title,
+        handleSave,
+      }),
+    };
+  });
 
   const handleAdd = () => {
     const newData: TodoItem = {
@@ -169,6 +100,15 @@ export const TodoTable = () => {
     setCount(count + 1);
   };
 
+  const handleDelete = (id: React.Key) => {
+    const newData = dataSource.filter((item) => item.id !== id);
+    setDataSource(newData);
+  };
+
+  useEffect(() => {
+    localStorage.setItem('TodoTableData', JSON.stringify(dataSource));
+  }, [dataSource]);
+
   return (
     <>
       <Button onClick={handleAdd} type="primary" style={{ marginBottom: 16 }}>
@@ -179,7 +119,7 @@ export const TodoTable = () => {
         rowClassName={() => 'editable-row'}
         bordered
         dataSource={dataSource}
-        columns={columns}
+        columns={columns as ColumnTypes}
         rowKey="id"
       />
     </>

@@ -1,5 +1,3 @@
-import { TodoTable } from "../../Widgets/TodoTable"
-
 export const MainPage = () => {
-    return <TodoTable/>
-}
+  return <>123</>;
+};
